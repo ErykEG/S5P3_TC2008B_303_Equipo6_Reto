@@ -1,104 +1,65 @@
+# server.py
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from threading import Thread
+from warehouse import Warehouse
 import logging
-import json
+import time
 
-import numpy as np
-from agent import Agent
+# RUN THIS FILE TO OPEN SERVER
 
 # Size of the board:
 width = 30
 height = 30
-num_boids = 20
+num_robots = 20
 
-# Set the number of agents here:
-flock = [Agent(*np.random.rand(2) * 30, width, height) for _ in range(num_boids)]
-
-
-def update_positions():
-    global flock
-    positions = []
-    for boid in flock:
-        boid.apply_behaviour(flock)
-        boid.update()
-        pos = boid.edges()
-        positions.append(pos)
-    return positions
-
-
-def positions_to_json(ps):
-    posDICT = []
-    for p in ps:
-        pos = {
-            "x": p[0],
-            "z": p[1],
-            "y": p[2]
-        }
-        posDICT.append(pos)
-    return json.dumps(posDICT)
-
+# Initiate model
+Model = Warehouse(width, height, num_robots)
 
 class Server(BaseHTTPRequestHandler):
 
     def _set_response(self):
         self.send_response(200)
-        self.send_header('Content-type', 'text/html')
+        self.send_header('Content-type', 'application/json')
         self.end_headers()
 
     def do_GET(self):
-        logging.info("GET request,\nPath: %s\nHeaders:\n%s\n", str(self.path), str(self.headers))
+        logging.info(f"GET request,\nPath: {str(self.path)}\nHeaders:\n{str(self.headers)}")
         self._set_response()
-        self.wfile.write("GET request for {}".format(self.path).encode('utf-8'))
+        self.wfile.write(f"GET request for {self.path}".encode('utf-8'))
 
     def do_POST(self):
-        content_length = int(self.headers['Content-Length'])
-        # post_data = self.rfile.read(content_length)
-        post_data = json.loads(self.rfile.read(content_length))
-        # logging.info("POST request,\nPath: %s\nHeaders:\n%s\n\nBody:\n%s\n",
-        # str(self.path), str(self.headers), post_data.decode('utf-8'))
-        logging.info("POST request,\nPath: %s\nHeaders:\n%s\n\nBody:\n%s\n",
-                     str(self.path), str(self.headers), json.dumps(post_data))
-
-        '''
-        x = post_data['x'] * 2
-        y = post_data['y'] * 2
-        z = post_data['z'] * 2
-        
-        position = {
-            "x" : x,
-            "y" : y,
-            "z" : z
-        }
-
-        self._set_response()
-        #self.wfile.write("POST request for {}".format(self.path).encode('utf-8'))
-        self.wfile.write(str(position).encode('utf-8'))
-        '''
-
-        positions = update_positions()
-        # print(positions)
-        self._set_response()
-        resp = "{\"data\":" + positions_to_json(positions) + "}"
-        # print(resp)
-        self.wfile.write(resp.encode('utf-8'))
-
+        try:
+            # Add a delay to control the rate at which the model progresses
+            time.sleep(0.5)  # Adjust the sleep time as needed
+            Model.step()
+            positions_json = Model.positions_to_json()
+            print(f"Sending positions: {positions_json}")
+            # Send the JSON response
+            self._set_response()
+            self.wfile.write(positions_json.encode('utf-8'))
+        except Exception as e:
+            print(f"Error processing POST request: {e}")
+            self.send_error(400, "Bad Request")
 
 def run(server_class=HTTPServer, handler_class=Server, port=8585):
-    logging.basicConfig(level=logging.INFO)
     server_address = ('', port)
     httpd = server_class(server_address, handler_class)
-    logging.info("Starting httpd...\n")  # HTTPD is HTTP Daemon!
+    print("Starting httpd...\n")
+    
+    # Create a thread to run the server
+    server_thread = Thread(target=httpd.serve_forever)
+    server_thread.daemon = True  # Daemonize thread to make sure it's terminated when the main program exits
+    server_thread.start()
+    
     try:
-        httpd.serve_forever()
-    except KeyboardInterrupt:  # CTRL+C stops the server
+        # Keep the main thread alive while the server thread is running
+        while True:
+            time.sleep(1)  # Add a delay to control the rate at which the main thread checks
+    except KeyboardInterrupt:
         pass
-    httpd.server_close()
-    logging.info("Stopping httpd...\n")
 
+    httpd.server_close()
+    print("Stopping httpd...\n")
 
 if __name__ == '__main__':
-    from sys import argv
-
-    if len(argv) == 2:
-        run(port=int(argv[1]))
-    else:
-        run()
+    run()
