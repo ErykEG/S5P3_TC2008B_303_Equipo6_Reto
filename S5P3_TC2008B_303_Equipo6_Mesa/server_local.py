@@ -2,18 +2,21 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from threading import Thread
 from warehouse import Warehouse
+from browserUI import server
 import logging
 import time
 
 # RUN THIS FILE TO OPEN SERVER
 
 # Size of the board:
-width = 30
-height = 30
+width = 50
+height = 50
 num_robots = 20
 
 # Initiate model
 Model = Warehouse(width, height, num_robots)
+
+#server.launch(open_browser=True)
 
 class Server(BaseHTTPRequestHandler):
 
