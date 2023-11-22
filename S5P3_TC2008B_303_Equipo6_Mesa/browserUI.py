@@ -4,6 +4,7 @@ from llegada import Llegada
 from robot import Robot
 from salida import Salida
 from celda import Celda
+from estanteria import Estanteria
 from warehouse import Warehouse
 
 MAX_NUMBER_ROBOTS = 10
@@ -30,6 +31,9 @@ def agent_portrayal(agent):
     elif isinstance(agent, Cargador):
         return {"Shape": "rect", "Filled": "true", "Color": "white", "Layer": 0,
                 "w": 0.5, "h": 0.5, "text_color": "Black", "text": "🔌"}
+    elif isinstance(agent, Estanteria):
+        return {"Shape": "rect", "Filled": "true", "Color": "yellow", "Layer": 0,
+                "w": 1, "h": 1, "text_color": "Black", "text": "🗄️"}
     elif isinstance(agent, Celda):
         portrayal = {"Shape": "rect", "Filled": "true", "Layer": 0, "w": 0.9, "h": 0.9, "text_color": "Black"}
         if agent.sucia:

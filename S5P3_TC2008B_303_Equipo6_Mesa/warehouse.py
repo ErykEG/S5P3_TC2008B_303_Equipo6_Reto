@@ -8,6 +8,7 @@ from robot import Robot
 from cargador import Cargador
 from llegada import Llegada
 from salida import Salida
+from estanteria import Estanteria
 from celda import Celda
 import json
 import numpy as np
@@ -53,10 +54,15 @@ class Warehouse(Model):
         self.schedule.add(tarima_salida)
 
         # Posicionamiento de robots
-        pos_inicial_robots = [(1, 1)] * num_agentes
+        posicion_inicial = 49
+        cambio_en_posicion = 1
         for id in range(num_agentes):
             robot = Robot(id, self)
-            self.grid.place_agent(robot, pos_inicial_robots[id])
+            self.grid.place_agent(robot, (posicion_inicial, 46))
+            posicion_inicial = posicion_inicial - cambio_en_posicion
+            if posicion_inicial == 44:
+                posicion_inicial = 0
+                cambio_en_posicion = -1
             self.schedule.add(robot)
 
         self.datacollector = DataCollector(
@@ -69,6 +75,16 @@ class Warehouse(Model):
             cargador = Cargador(f"{pos}", self)
             self.schedule.add(cargador)
             self.grid.place_agent(cargador, (pos, 49))
+
+         # Posicionamiento de estanterias
+        ubicacion_estanterias_x = {8, 16, 35, 43}
+        ubicacion_estanterias_y = {10, 20, 30, 40}
+        for pos_x in ubicacion_estanterias_x:
+            for pos_y in ubicacion_estanterias_y:
+                estanteria = Estanteria(f"Estanteria_{pos_x}_{pos_y}", self)
+                self.schedule.add(estanteria)
+                self.grid.place_agent(estanteria, (pos_x, pos_y))
+
 
     def get_positions(self) -> List[Dict[str, int]]:
         positions = []
